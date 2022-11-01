@@ -4,6 +4,7 @@ const Segment = require("../Models/segment.model");
 const unzipper = require("unzipper");
 const path = require("path");
 const xml2js = require("xml2js");
+const docxConverter = require("docx-pdf");
 const fs = require("fs");
 
 const upload = asyncHandle(async (req, res) => {
@@ -11,6 +12,15 @@ const upload = asyncHandle(async (req, res) => {
     .createReadStream(req.file.path)
     .pipe(unzipper.Extract({ path: path.join(__dirname, "../public/uploads") }))
     .promise();
+
+  let file = req.file.path;
+  //convert docx to pdf
+  docxConverter(file, `${file}.pdf`, function (err, result) {
+    if (err) {
+      console.log(err);
+    }
+    console.log("result" + result);
+  });
 
   let document;
 
