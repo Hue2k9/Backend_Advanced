@@ -7,12 +7,12 @@ const docRouter = express.Router();
 docRouter
   .route("/")
   //   .get(docController.uploadView)
-  .post(upload.upload.single("file"), docController.upload);
+  .post(upload.upload.single("file"), docController.splitPdf);
 
-docRouter.post(
-  "/multiple",
-  upload.upload.array("files", 3),
-  docController.multipleFile
-);
+// docRouter.post(
+//   "/multiple",
+//   upload.upload.array("files", 3),
+//   docController.multipleFile
+// );
 
 module.exports = docRouter;

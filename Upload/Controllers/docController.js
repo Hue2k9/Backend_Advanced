@@ -5,25 +5,68 @@ const unzipper = require("unzipper");
 const path = require("path");
 const xml2js = require("xml2js");
 const docxConverter = require("docx-pdf");
+const {
+  WordsApi,
+  SplitDocumentRequest,
+  CommentsCollection,
+} = require("asposewordscloud");
 const fs = require("fs");
+const PDFExtract = require("pdf.js-extract").PDFExtract;
+const pdfExtract = new PDFExtract();
+const pdf = require("pdf-parse");
+const PDFDocument = require("pdf-lib").PDFDocument;
 
-const upload = asyncHandle(async (req, res) => {
-  await fs
-    .createReadStream(req.file.path)
-    .pipe(unzipper.Extract({ path: path.join(__dirname, "../public/uploads") }))
-    .promise();
+const splitPdf = asyncHandle(async (req, res) => {
+  // await fs
+  //   .createReadStream(req.file.path)
+  //   .pipe(unzipper.Extract({ path: path.join(__dirname, "../public/uploads") }))
+  //   .promise();
 
   let file = req.file.path;
-  //convert docx to pdf
-  docxConverter(file, `${file}.pdf`, function (err, result) {
+  let name = req.file.originalname;
+  //Convert file docx to pdf
+  docxConverter(file, `${file}.pdf`, async function (err, result) {
     if (err) {
-      console.log(err);
+      res.send("Co loi xay ra!");
+    } else {
+      console.log("result: " + result);
+      const docmentAsBytes = await fs.promises.readFile(
+        `./public/uploads/${name}.pdf`
+      );
+
+      // Load your PDFDocument
+      const pdfDoc = await PDFDocument.load(docmentAsBytes);
+
+      const numberOfPages = pdfDoc.getPages().length;
+      let numberReview = numberOfPages / 3 + 1;
+      console.log("Tổng số trang: " + numberOfPages);
+      console.log("Số trang review: " + numberReview);
+
+      // Create a new "sub" document
+      const subDocument = await PDFDocument.create();
+
+      for (let i = 0; i < numberReview; i++) {
+        // copy the page at current index
+        const [copiedPage] = await subDocument.copyPages(pdfDoc, [i]);
+        // add page
+        subDocument.addPage(copiedPage);
+      }
+
+      const pdfBytes = await subDocument.save();
+
+      await writePdfBytesToFile(
+        `./public/uploads/review-${name}.pdf`,
+        pdfBytes
+      );
+
+      res.status(201).send("success");
     }
-    console.log("result" + result);
   });
 
+  //========================= Read file XML=======================================
+  /*
   let document;
-
+  res.send("sucess!");
   //Document
   fs.readFile(
     path.join(__dirname, "../public/uploads/docProps/app.xml"),
@@ -44,7 +87,7 @@ const upload = asyncHandle(async (req, res) => {
     }
   );
 
-  //Segment
+  // //Segment
   fs.readFile(
     path.join(__dirname, "../public/uploads/word/document.xml"),
     "utf-8",
@@ -86,7 +129,12 @@ const upload = asyncHandle(async (req, res) => {
       });
     }
   );
+  */
 });
+
+function writePdfBytesToFile(fileName, pdfBytes) {
+  return fs.promises.writeFile(fileName, pdfBytes);
+}
 
 // const uploadView = asyncHandle(async (req, res) => {
 //   res.render("upfile.ejs");
@@ -98,7 +146,7 @@ const multipleFile = asyncHandle(async (req, res) => {
 });
 
 module.exports = {
-  upload,
+  splitPdf,
   multipleFile,
   // uploadView,
 };
