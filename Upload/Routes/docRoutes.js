@@ -6,7 +6,7 @@ const docRouter = express.Router();
 
 docRouter
   .route("/")
-  //   .get(docController.uploadView)
+  .get(docController.uploadView)
   .post(upload.upload.single("file"), docController.splitPdf);
 
 // docRouter.post(

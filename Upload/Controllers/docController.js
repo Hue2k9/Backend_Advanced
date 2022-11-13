@@ -15,6 +15,8 @@ const PDFExtract = require("pdf.js-extract").PDFExtract;
 const pdfExtract = new PDFExtract();
 const pdf = require("pdf-parse");
 const PDFDocument = require("pdf-lib").PDFDocument;
+const libre = require("libreoffice-convert");
+libre.convertAsync = require("util").promisify(libre.convert);
 
 const splitPdf = asyncHandle(async (req, res) => {
   // await fs
@@ -24,44 +26,49 @@ const splitPdf = asyncHandle(async (req, res) => {
 
   let file = req.file.path;
   let name = req.file.originalname;
+  let outputFilePath = Date.now() + "output.pdf";
+  const docxBuf = await fs.readFileSync(req.file.path);
+  let pdfBuf = await libre.convertAsync(docxBuf, ".pdf", undefined);
+  // fs.writeFileSync(`./public/uploads/${name}.pdf`, done);
+  fs.writeFileSync(outputFilePath, pdfBuf);
+
   //Convert file docx to pdf
-  docxConverter(file, `${file}.pdf`, async function (err, result) {
-    if (err) {
-      res.send("Co loi xay ra!");
-    } else {
-      console.log("result: " + result);
-      const docmentAsBytes = await fs.promises.readFile(
-        `./public/uploads/${name}.pdf`
-      );
+  // docxConverter(file, `${file}.pdf`, async function (err, result) {
+  //   if (err) {
+  //     res.send("Co loi xay ra!");
+  //   } else {
+  //     console.log("result: " + result);
+  //   }
+  // });
 
-      // Load your PDFDocument
-      const pdfDoc = await PDFDocument.load(docmentAsBytes);
+  const docmentAsBytes = await fs.promises.readFileSync(
+    `./public/uploads/${name}.pdf`
+  );
 
-      const numberOfPages = pdfDoc.getPages().length;
-      let numberReview = numberOfPages / 3 + 1;
-      console.log("Tổng số trang: " + numberOfPages);
-      console.log("Số trang review: " + numberReview);
+  // Load your PDFDocument
+  const pdfDoc = await PDFDocument.load(docmentAsBytes);
+  const numberOfPages = pdfDoc.getPages().length;
+  let numberReview = numberOfPages / 3 + 1;
+  console.log("Tổng số trang: " + numberOfPages);
+  console.log("Số trang review: " + numberReview);
 
-      // Create a new "sub" document
-      const subDocument = await PDFDocument.create();
+  // Create a new "sub" document
+  const subDocument = await PDFDocument.create();
 
-      for (let i = 0; i < numberReview; i++) {
-        // copy the page at current index
-        const [copiedPage] = await subDocument.copyPages(pdfDoc, [i]);
-        // add page
-        subDocument.addPage(copiedPage);
-      }
+  for (let i = 0; i < numberReview; i++) {
+    // copy the page at current index
+    const [copiedPage] = await subDocument.copyPages(pdfDoc, [i]);
+    // add page
+    subDocument.addPage(copiedPage);
+  }
 
-      const pdfBytes = await subDocument.save();
+  const pdfBytes = await subDocument.save();
 
-      await writePdfBytesToFile(
-        `./public/uploads/review-${name}.pdf`,
-        pdfBytes
-      );
+  await writePdfBytesToFile(`./public/uploads/review-${name}.pdf`, pdfBytes);
 
-      res.status(201).send("success");
-    }
-  });
+  fs.unlinkSync(`./public/uploads/${name}.pdf`);
+
+  res.status(201).send("success");
 
   //========================= Read file XML=======================================
   /*
@@ -136,9 +143,9 @@ function writePdfBytesToFile(fileName, pdfBytes) {
   return fs.promises.writeFile(fileName, pdfBytes);
 }
 
-// const uploadView = asyncHandle(async (req, res) => {
-//   res.render("upfile.ejs");
-// });
+const uploadView = asyncHandle(async (req, res) => {
+  res.render("upfile.ejs");
+});
 
 const multipleFile = asyncHandle(async (req, res) => {
   console.log(req.files);
@@ -148,5 +155,5 @@ const multipleFile = asyncHandle(async (req, res) => {
 module.exports = {
   splitPdf,
   multipleFile,
-  // uploadView,
+  uploadView,
 };
