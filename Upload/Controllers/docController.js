@@ -15,56 +15,70 @@ const PDFExtract = require("pdf.js-extract").PDFExtract;
 const pdfExtract = new PDFExtract();
 const pdf = require("pdf-parse");
 const PDFDocument = require("pdf-lib").PDFDocument;
+const libre = require("libreoffice-convert");
+libre.convertAsync = require("util").promisify(libre.convert);
+var toPdf = require("custom-soffice-to-pdf");
+const doc = require("file-convert");
 
 const splitPdf = asyncHandle(async (req, res) => {
-  // await fs
-  //   .createReadStream(req.file.path)
-  //   .pipe(unzipper.Extract({ path: path.join(__dirname, "../public/uploads") }))
-  //   .promise();
-
-  let file = req.file.path;
   let name = req.file.originalname;
-  //Convert file docx to pdf
-  docxConverter(file, `${file}.pdf`, async function (err, result) {
-    if (err) {
-      res.send("Co loi xay ra!");
-    } else {
-      console.log("result: " + result);
-      const docmentAsBytes = await fs.promises.readFile(
-        `./public/uploads/${name}.pdf`
-      );
+  const options = {
+    libreofficeBin: "D:\\program\\soffice.exe",
+    sourceFile: req.file.path, // .ppt, .pptx, .odp, .key and .pdf
+    outputDir: "D:\\nodejs\\Backend_nangcao\\Upload\\public\\uploads",
+    img: false,
+    imgExt: "jpg", // Optional and default value png
+    reSize: 800, //  Optional and default Resize is 1200
+    density: 120, //  Optional and default density value is 120
+    disableExtensionCheck: true, // convert any files to pdf or/and image
+  };
 
-      // Load your PDFDocument
-      const pdfDoc = await PDFDocument.load(docmentAsBytes);
+  // Convert document to pdf and/or image
+  await doc
+    .convert(options)
+    .then((res) => {
+      console.log("Convert successfully!", res); // Success or Error
+    })
+    .catch((e) => {
+      console.log("e", e);
+    });
 
-      const numberOfPages = pdfDoc.getPages().length;
-      let numberReview = numberOfPages / 3 + 1;
-      console.log("Tổng số trang: " + numberOfPages);
-      console.log("Số trang review: " + numberReview);
+  let newName = name.split(".");
+  const docmentAsBytes = await fs.promises.readFile(
+    `./public/uploads/${newName[0]}.pdf`
+  );
 
-      // Create a new "sub" document
-      const subDocument = await PDFDocument.create();
+  // Load your PDFDocument
+  const pdfDoc = await PDFDocument.load(docmentAsBytes);
+  const numberOfPages = pdfDoc.getPages().length;
+  let numberReview = numberOfPages / 3 + 1;
+  console.log("Tổng số trang: " + numberOfPages);
+  console.log("Số trang review: " + numberReview);
 
-      for (let i = 0; i < numberReview; i++) {
-        // copy the page at current index
-        const [copiedPage] = await subDocument.copyPages(pdfDoc, [i]);
-        // add page
-        subDocument.addPage(copiedPage);
-      }
+  // Create a new "sub" document
+  const subDocument = await PDFDocument.create();
 
-      const pdfBytes = await subDocument.save();
+  for (let i = 0; i < numberReview; i++) {
+    // copy the page at current index
+    const [copiedPage] = await subDocument.copyPages(pdfDoc, [i]);
+    // add page
+    subDocument.addPage(copiedPage);
+  }
 
-      await writePdfBytesToFile(
-        `./public/uploads/review-${name}.pdf`,
-        pdfBytes
-      );
+  const pdfBytes = await subDocument.save();
 
-      res.status(201).send("success");
-    }
-  });
+  await writePdfBytesToFile(`./public/uploads/review-${name}.pdf`, pdfBytes);
+
+  fs.unlinkSync(`./public/uploads/${newName[0]}.pdf`);
+
+  res.status(201).send("success");
 
   //========================= Read file XML=======================================
   /*
+   // await fs
+  //   .createReadStream(req.file.path)
+  //   .pipe(unzipper.Extract({ path: path.join(__dirname, "../public/uploads") }))
+  //   .promise();
   let document;
   res.send("sucess!");
   //Document
@@ -136,9 +150,9 @@ function writePdfBytesToFile(fileName, pdfBytes) {
   return fs.promises.writeFile(fileName, pdfBytes);
 }
 
-// const uploadView = asyncHandle(async (req, res) => {
-//   res.render("upfile.ejs");
-// });
+const uploadView = asyncHandle(async (req, res) => {
+  res.render("upfile.ejs");
+});
 
 const multipleFile = asyncHandle(async (req, res) => {
   console.log(req.files);
@@ -148,5 +162,5 @@ const multipleFile = asyncHandle(async (req, res) => {
 module.exports = {
   splitPdf,
   multipleFile,
-  // uploadView,
+  uploadView,
 };
