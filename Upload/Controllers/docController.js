@@ -21,12 +21,6 @@ var toPdf = require("custom-soffice-to-pdf");
 const doc = require("file-convert");
 
 const splitPdf = asyncHandle(async (req, res) => {
-  // await fs
-  //   .createReadStream(req.file.path)
-  //   .pipe(unzipper.Extract({ path: path.join(__dirname, "../public/uploads") }))
-  //   .promise();
-
-  let file = req.file.path;
   let name = req.file.originalname;
   const options = {
     libreofficeBin: "D:\\program\\soffice.exe",
@@ -43,21 +37,12 @@ const splitPdf = asyncHandle(async (req, res) => {
   await doc
     .convert(options)
     .then((res) => {
-      console.log("res", res); // Success or Error
+      console.log("Convert successfully!", res); // Success or Error
     })
     .catch((e) => {
       console.log("e", e);
     });
-  // Convert document to pdf and/or image
 
-  //Convert file docx to pdf
-  // docxConverter(file, `${file}.pdf`, async function (err, result) {
-  //   if (err) {
-  //     res.send("Co loi xay ra!");
-  //   } else {
-  //     console.log("result: " + result);
-  //   }
-  // });
   let newName = name.split(".");
   const docmentAsBytes = await fs.promises.readFile(
     `./public/uploads/${newName[0]}.pdf`
@@ -90,6 +75,10 @@ const splitPdf = asyncHandle(async (req, res) => {
 
   //========================= Read file XML=======================================
   /*
+   // await fs
+  //   .createReadStream(req.file.path)
+  //   .pipe(unzipper.Extract({ path: path.join(__dirname, "../public/uploads") }))
+  //   .promise();
   let document;
   res.send("sucess!");
   //Document
