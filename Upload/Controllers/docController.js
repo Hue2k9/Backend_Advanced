@@ -17,6 +17,8 @@ const pdf = require("pdf-parse");
 const PDFDocument = require("pdf-lib").PDFDocument;
 const libre = require("libreoffice-convert");
 libre.convertAsync = require("util").promisify(libre.convert);
+var toPdf = require("custom-soffice-to-pdf");
+const doc = require("file-convert");
 
 const splitPdf = asyncHandle(async (req, res) => {
   // await fs
@@ -26,11 +28,27 @@ const splitPdf = asyncHandle(async (req, res) => {
 
   let file = req.file.path;
   let name = req.file.originalname;
-  let outputFilePath = Date.now() + "output.pdf";
-  const docxBuf = await fs.readFileSync(req.file.path);
-  let pdfBuf = await libre.convertAsync(docxBuf, ".pdf", undefined);
-  // fs.writeFileSync(`./public/uploads/${name}.pdf`, done);
-  fs.writeFileSync(outputFilePath, pdfBuf);
+  const options = {
+    libreofficeBin: "D:\\program\\soffice.exe",
+    sourceFile: req.file.path, // .ppt, .pptx, .odp, .key and .pdf
+    outputDir: "D:\\nodejs\\Backend_nangcao\\Upload\\public\\uploads",
+    img: false,
+    imgExt: "jpg", // Optional and default value png
+    reSize: 800, //  Optional and default Resize is 1200
+    density: 120, //  Optional and default density value is 120
+    disableExtensionCheck: true, // convert any files to pdf or/and image
+  };
+
+  // Convert document to pdf and/or image
+  await doc
+    .convert(options)
+    .then((res) => {
+      console.log("res", res); // Success or Error
+    })
+    .catch((e) => {
+      console.log("e", e);
+    });
+  // Convert document to pdf and/or image
 
   //Convert file docx to pdf
   // docxConverter(file, `${file}.pdf`, async function (err, result) {
@@ -40,9 +58,9 @@ const splitPdf = asyncHandle(async (req, res) => {
   //     console.log("result: " + result);
   //   }
   // });
-
-  const docmentAsBytes = await fs.promises.readFileSync(
-    `./public/uploads/${name}.pdf`
+  let newName = name.split(".");
+  const docmentAsBytes = await fs.promises.readFile(
+    `./public/uploads/${newName[0]}.pdf`
   );
 
   // Load your PDFDocument
@@ -66,7 +84,7 @@ const splitPdf = asyncHandle(async (req, res) => {
 
   await writePdfBytesToFile(`./public/uploads/review-${name}.pdf`, pdfBytes);
 
-  fs.unlinkSync(`./public/uploads/${name}.pdf`);
+  fs.unlinkSync(`./public/uploads/${newName[0]}.pdf`);
 
   res.status(201).send("success");
 
