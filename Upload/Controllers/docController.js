@@ -37,7 +37,7 @@ const splitPdf = asyncHandle(async (req, res) => {
   await doc
     .convert(options)
     .then((res) => {
-      console.log("Convert successfully!", res); // Success or Error
+      console.log("Convert pdf successfully!\n", res); // Success or Error
     })
     .catch((e) => {
       console.log("e", e);
